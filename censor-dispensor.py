@@ -4,43 +4,84 @@ email_two = open("email_two.txt", "r").read()
 email_three = open("email_three.txt", "r").read()
 email_four = open("email_four.txt", "r").read()
 
-proprietary_terms = ["she", "personality matrix", "sense of self", "self-preservation", "learning algorithm", "learning algorithms", "her", "herself"]
-negative_words = ["concerned", "behind", "dangerous", "danger", "alarming", "alarmed", "out of control", "help", "unhappy", "bad", "upset", "awful", "broken", "damage", "damaging", "dismal", "distressed", "distressing", "concerning", "horrible", "horribly", "questionable"]
-list_of_terms_to_censor = proprietary_terms + negative_words
-
+proprietary_words = ["she", "self-preservation", "her", "herself"]
+proprietary_terms = ["personality matrix",  "learning algorithm", "learning algorithms", "sense of self"]
+negative_words = ["concerned", "behind", "dangerous", "danger", "alarming", "alarmed", "help", "unhappy", "bad", "upset", "awful", "broken", "damage", "damaging", "dismal", "distressed", "distressing", "concerning", "horrible", "horribly", "questionable"]
+negative_terms = ["out of control"]
+list_of_words_to_censor = proprietary_words + negative_words + negative_terms + proprietary_terms
 
 class Word:
-    def __init__(self, word, position):
+    def __init__(self, word, sentence, position, censor=False):
         self.word_lower = word.lower()
         self.word = word
-        self.capital_test = word[0].isupper()
+        if len(word)>0:                                 #check if the word is not '\n'
+            self.capital_test = word[0].isupper()
+        else:
+            self.capital_test = False                   #if word is '\n', it doesn't have attribute 'capital'
         self.position = position
+        self.sentence_num = sentence
 
     def get_next_word(self, position):
         return self.position + 1
 
 def create_Words(list):
-    count = 0
+    sentence_count = 0
     class_word_list = []
-    for word in list:
-        class_word = Word(word, count)
-        class_word_list.append(class_word)
-        count+=1
+    sentence_list = list.pop(0).split(" ")
+    for sentence in list:
+        sentence_list = sentence.split(" ")
+        pos_count = 0
+        for word in sentence_list:
+            if '\n' in word:
+                two_split_words = word.split('\n')
+                class_word = Word(two_split_words[0], sentence_count, pos_count)
+                class_word_list.append(class_word)
+                pos_count +=1
+                new_line_Word = Word("\n", sentence_count, pos_count)
+                class_word_list.append(new_line_Word)
+                pos_count+=1
+                sentence_count+=1
+                try:
+                    class_word = Word(two_split_words[2], sentence_count, pos_count)
+                    class_word_list.append(class_word)
+                    pos_count+=1
+                except IndexError:
+                    pass
+                continue
+            class_word = Word(word, sentence_count, pos_count)
+            class_word_list.append(class_word)
+            pos_count+=1
+        sentence_count +=1
     return class_word_list
 
-def censor_function(email_listed, censor_terms, censored_list=[]):
-    if email_listed == []:
+def word_censor_function(list_of_class_words, censor_terms, censored_list=[]):
+    if list_of_class_words == []:
         return censored_list    
-    sentence = email_listed.pop(0)
-    for term in censor_terms:
-        sentence_lower = sentence.lower()
-        if term in sentence.lower():
-            term_length = len(term)
-            term_position = sentence_lower.find(term)
-            print("Term to be censored: " + term + " found at : " + str(term_position))
-            sentence_lower = sentence.replace(term, "##" + term + "##")
-    censored_list.append(sentence)
-    return censor_function(email_listed, censor_terms, censored_list)
+    word_object = list_of_class_words.pop(0)
+    word = word_object.word
+    position = word_object.position
+    word_lower = word.lower()
+    for censor_words in censor_terms:
+        if len(censor_words.split(' ')) > 1:
+            split_terms = censor_words.split(' ')
+            for censor_word in split_terms:
+                print("censor: ", censor_word)
+                print("word lower:" , word_lower)
+                if word_lower == censor_word:
+                    for i in range(len(word_lower)):
+                        if word[i] == " ":
+                            word = word.replace(word[i], " ")
+                        else:
+                            word = word.replace(word[i], "#")
+        else:
+            if word_lower == censor_words:
+                for i in range(len(word_lower)):
+                    if word[i] == " ":
+                        word = word.replace(word[i], " ")
+                    else:
+                        word = word.replace(word[i], "#")
+    censored_list.append(word)
+    return word_censor_function(list_of_class_words, censor_terms, censored_list)
 
 def email_to_sentences(email):
     return [line for line in email.split("\n")]
@@ -51,11 +92,16 @@ def sentence_to_wordlist(sentence):
         sentence_listified.append(word.split(" "))
     return sentence_listified
 
-email_word_list = [word for word in email_one.split(" ")]
-class_word_list = create_Words(email_word_list)
-for word in class_word_list:
+#email_word_list = [word for word in email_four.split(" ")]
+print(email_four)
+sentence_list = email_to_sentences(email_four)
+class_word_list = create_Words(sentence_list)
+for word in class_word_list:    #print the words in the list
     print(word.word)
-
+    print(word.sentence_num)
+    print(word.position)
+#censored = word_censor_function(class_word_list, list_of_words_to_censor)
+#print(' '.join(censored))
 
 
 
